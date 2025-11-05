@@ -11,20 +11,41 @@ const userRoutes = require('./routes/users');
 const app = express();
 const server = http.createServer(app);
 const { Server } = require('socket.io');
-const io = new Server(server, { cors: { origin: '*' } });
 
-app.use(cors());
+// ✅ Allowed origins (update if frontend URL changes)
+const allowedOrigins = [
+  "https://idea-hub-swart.vercel.app",
+  "http://localhost:3000"
+];
+
+// ✅ CORS for Express
+app.use(cors({
+  origin: allowedOrigins,
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  credentials: true
+}));
+
+// ✅ CORS for Socket.io
+const io = new Server(server, {
+  cors: {
+    origin: allowedOrigins,
+    methods: ["GET", "POST"]
+  }
+});
+
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 
-// simple socket.io integration
 io.on('connection', (socket) => {
-  console.log('client connected', socket.id);
-  socket.on('disconnect', () => console.log('client disconnected', socket.id));
+  console.log('Client connected:', socket.id);
+  socket.on('disconnect', () => console.log('Client disconnected', socket.id));
 });
 
-// make io available to routes via request
-app.use((req, res, next) => { req.io = io; next(); });
+// ✅ Make Socket.io available in routes
+app.use((req, res, next) => {
+  req.io = io;
+  next();
+});
 
 app.use('/api/auth', authRoutes);
 app.use('/api/posts', postRoutes);
@@ -34,11 +55,18 @@ const PORT = process.env.PORT || 5000;
 
 async function start() {
   try {
-    await mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/ideahub');
-    console.log('Connected to MongoDB');
-    server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+    const db = process.env.MONGO_URI;
+    if (!db) {
+      throw new Error("❌ Missing MONGO_URI in environment variables");
+    }
+
+    await mongoose.connect(db);
+    console.log("✅ Connected to MongoDB");
+
+    server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+
   } catch (err) {
-    console.error('Failed to start server', err);
+    console.error("❌ Failed to start server\n", err);
     process.exit(1);
   }
 }
