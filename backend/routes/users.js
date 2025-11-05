@@ -9,6 +9,18 @@ router.post('/test', (req, res) => {
   res.json({ message: 'test endpoint works' });
 });
 
+// Get user ID by username
+router.get('/by-username/:username', async (req, res) => {
+  try {
+    const user = await User.findOne({ username: req.params.username }).select('_id username name profilePicture');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.json(user);
+  } catch (err) {
+    console.error('Error fetching user by username:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // get current user profile
 router.get('/profile/me', auth, async (req, res) => {
   try {
