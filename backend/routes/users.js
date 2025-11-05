@@ -101,6 +101,47 @@ router.post('/follow/:id', auth, async (req, res) => {
   }
 });
 
+// Follow by username (new endpoint that accepts username)
+router.post('/follow-by-username/:username', auth, async (req, res) => {
+  try {
+    console.log('Follow by username endpoint hit:', req.params.username);
+    
+    // Find target user by username
+    const target = await User.findOne({ username: req.params.username });
+    if (!target) return res.status(404).json({ message: 'User not found' });
+    
+    // Get current user
+    const me = await User.findById(req.user._id);
+    if (!me) return res.status(404).json({ message: 'Current user not found' });
+    
+    // Check if already following
+    const isFollowing = me.following.some(id => id.toString() === target._id.toString());
+    
+    if (isFollowing) {
+      // Unfollow
+      me.following = me.following.filter(id => id.toString() !== target._id.toString());
+      target.followers = target.followers.filter(id => id.toString() !== me._id.toString());
+    } else {
+      // Follow
+      me.following.push(target._id);
+      target.followers.push(me._id);
+    }
+    
+    await me.save();
+    await target.save();
+    
+    res.json({ 
+      success: true,
+      action: isFollowing ? 'unfollowed' : 'followed',
+      me, 
+      target 
+    });
+  } catch (err) {
+    console.error('Follow by username error:', err);
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+});
+
 // unfollow endpoint
 router.post('/unfollow/:id', auth, async (req, res) => {
   try {
@@ -114,6 +155,38 @@ router.post('/unfollow/:id', auth, async (req, res) => {
     res.json({ me, target });
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Unfollow by username (new endpoint that accepts username)
+router.post('/unfollow-by-username/:username', auth, async (req, res) => {
+  try {
+    console.log('Unfollow by username endpoint hit:', req.params.username);
+    
+    // Find target user by username
+    const target = await User.findOne({ username: req.params.username });
+    if (!target) return res.status(404).json({ message: 'User not found' });
+    
+    // Get current user
+    const me = await User.findById(req.user._id);
+    if (!me) return res.status(404).json({ message: 'Current user not found' });
+    
+    // Remove from following/followers
+    me.following = me.following.filter(id => id.toString() !== target._id.toString());
+    target.followers = target.followers.filter(id => id.toString() !== me._id.toString());
+    
+    await me.save();
+    await target.save();
+    
+    res.json({ 
+      success: true,
+      message: 'Unfollowed successfully',
+      me, 
+      target 
+    });
+  } catch (err) {
+    console.error('Unfollow by username error:', err);
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
 });
 
