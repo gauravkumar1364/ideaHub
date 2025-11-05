@@ -21,9 +21,9 @@ const allowedOrigins = [
 
 // ✅ Enable CORS
 app.use(cors({
-  origin: allowedOrigins,
+  origin: "*",
   methods: ["GET", "POST", "PUT", "DELETE"],
-  credentials: true
+  credentials: false
 }));
 
 // ✅ Socket IO with CORS
