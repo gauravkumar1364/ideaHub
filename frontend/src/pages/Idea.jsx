@@ -1,6 +1,18 @@
 import React, { useEffect, useState } from 'react'
 import axios from 'axios'
 import { useParams, useNavigate } from 'react-router-dom'
+import {
+  FiArrowLeft,
+  FiCopy,
+  FiBookmark,
+  FiCompass,
+  FiTarget,
+  FiZap,
+  FiTag,
+  FiThumbsUp,
+  FiThumbsDown,
+  FiMessageSquare
+} from 'react-icons/fi'
 
 const API = import.meta.env.VITE_API || 'http://localhost:5000/api'
 
@@ -9,8 +21,8 @@ export default function IdeaPage(){
   const navigate = useNavigate()
   const [idea, setIdea] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [replyText, setReplyText] = useState({})
   const [user, setUser] = useState(null)
+  const [newComment, setNewComment] = useState('')
 
   useEffect(()=>{
     const stored = localStorage.getItem('user')
@@ -40,13 +52,18 @@ export default function IdeaPage(){
     }
   }
 
-  async function addComment(text){
+  async function submitComment(){
     if(!user) return alert('Please log in')
-    if(!text.trim()) return
+    if(!newComment.trim()) return
     try{
       const token = localStorage.getItem('token')
-      const res = await axios.post(API + '/posts/' + id + '/comment', { text }, { headers: { Authorization: `Bearer ${token}` } })
+      const res = await axios.post(
+        API + '/posts/' + id + '/comment',
+        { text: newComment.trim() },
+        { headers: { Authorization: `Bearer ${token}` } }
+      )
       setIdea(res.data)
+      setNewComment('')
     }catch(e){
       alert('Comment failed')
     }
@@ -56,117 +73,198 @@ export default function IdeaPage(){
   if(!idea) return <div style={{padding: '40px', textAlign: 'center'}}>Idea not found</div>
 
   const userVoted = idea.upvotes?.some(u => u._id === user?._id) ? 'up' : idea.downvotes?.some(u => u._id === user?._id) ? 'down' : null
+  const authorName = idea.author?.name || idea.author?.username || 'Anonymous'
+  const formatDateTime = (value) => {
+    try{
+      return new Intl.DateTimeFormat('en', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }).format(new Date(value))
+    }catch{
+      return ''
+    }
+  }
 
   return (
     <div className="idea-page">
-      <button onClick={() => navigate(-1)} style={{marginBottom: '20px', padding: '8px 16px', borderRadius: '6px', border: '1px solid #ddd'}}>← Back</button>
-      
-      <article className="idea-detail">
-        <div className="idea-header">
-          <h1>{idea.title}</h1>
-          <div className="idea-meta">
-            <span className="category-badge">{idea.category}</span>
-            <span style={{color: '#999', fontSize: '14px'}}>{new Date(idea.createdAt).toLocaleDateString()}</span>
-            <span style={{color: '#999', fontSize: '14px'}}>👁️ {idea.views} views</span>
-          </div>
-        </div>
+      <div className="page-shell idea-shell">
+        <button onClick={() => navigate(-1)} className="back-button">
+          <FiArrowLeft aria-hidden="true" />
+          <span>Back</span>
+        </button>
 
-        <div className="idea-author-card">
-          <div>
-            <strong>{idea.author?.name}</strong>
-            {idea.author?.department && <p style={{color: '#666', fontSize: '13px'}}>{idea.author.department}</p>}
-          </div>
-          <button style={{padding: '6px 12px', borderRadius: '6px', background: '#007bff', color: 'white', border: 'none', cursor: 'pointer'}}>Follow</button>
-        </div>
-
-        <div className="idea-content">
-          <section>
-            <h3>📌 Problem Statement</h3>
-            <p>{idea.problemStatement || idea.description}</p>
-          </section>
-
-          <section>
-            <h3>🚀 Solution Overview</h3>
-            <p>{idea.solutionOverview || 'No details provided'}</p>
-          </section>
-
-          <section>
-            <h3>🎯 Target Audience</h3>
-            <p>{idea.targetAudience || 'Not specified'}</p>
-          </section>
-
-          {idea.impact && (
-            <section>
-              <h3>💡 Impact & USP</h3>
-              <p>{idea.impact}</p>
-            </section>
-          )}
-
-          {idea.tags && idea.tags.length > 0 && (
-            <section>
-              <h3>🏷️ Tags</h3>
-              <div style={{display: 'flex', gap: '8px', flexWrap: 'wrap'}}>
-                {idea.tags.map(tag => (
-                  <span key={tag} style={{background: '#f0f0f0', padding: '6px 12px', borderRadius: '20px', fontSize: '13px'}}>
-                    #{tag}
-                  </span>
-                ))}
+        <article className="idea-detail card">
+          <header className="idea-header">
+            <div>
+              <h1>{idea.title}</h1>
+              <div className="idea-meta">
+                <span className="category-badge">{idea.category}</span>
+                <span>{formatDateTime(idea.createdAt)}</span>
+                {idea.views !== undefined && <span>{idea.views} views</span>}
               </div>
-            </section>
-          )}
-        </div>
-
-        <div className="idea-stats">
-          <div>Upvotes: <strong>{idea.upvotes?.length || 0}</strong></div>
-          <div>Downvotes: <strong>{idea.downvotes?.length || 0}</strong></div>
-          <div>Comments: <strong>{idea.comments?.length || 0}</strong></div>
-          <div>Ranking: <strong>{Math.round(idea.ranking * 10) / 10}</strong></div>
-        </div>
-
-        <div className="idea-actions">
-          <button onClick={() => vote('up')} className={userVoted === 'up' ? 'active' : ''}>👍 Upvote</button>
-          <button onClick={() => vote('down')} className={userVoted === 'down' ? 'active' : ''}>👎 Downvote</button>
-          <button onClick={() => {
-            navigator.clipboard.writeText(window.location.href)
-            alert('Link copied!')
-          }}>🔗 Share</button>
-        </div>
-
-        <div className="comments-section">
-          <h3>💬 Comments ({idea.comments?.length || 0})</h3>
-          
-          {user && (
-            <div className="comment-form">
-              <textarea placeholder="Add a comment..." id="new-comment" style={{width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '6px', minHeight: '80px'}}></textarea>
-              <button onClick={() => {
-                const text = document.getElementById('new-comment').value
-                addComment(text)
-                document.getElementById('new-comment').value = ''
-              }} style={{marginTop: '8px', padding: '10px 20px', background: '#007bff', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer'}}>Post Comment</button>
             </div>
-          )}
+            <div className="idea-share">
+              <button
+                className="action-btn outline"
+                onClick={() => {
+                  navigator.clipboard.writeText(window.location.href)
+                  alert('Link copied!')
+                }}
+              >
+                <FiCopy aria-hidden="true" />
+                <span>Copy Link</span>
+              </button>
+            </div>
+          </header>
 
-          <div className="comments-list" style={{marginTop: '20px'}}>
-            {idea.comments?.map((c, i) => (
-              <div key={i} style={{background: '#f9f9f9', padding: '12px', borderRadius: '6px', marginBottom: '12px'}}>
-                <div style={{fontWeight: 'bold', marginBottom: '6px'}}>{c.author?.name || 'User'}</div>
-                <p style={{color: '#333', marginBottom: '8px'}}>{c.text}</p>
-                <small style={{color: '#999'}}>{new Date(c.createdAt).toLocaleDateString()}</small>
-                
-                {c.replies?.length > 0 && (
-                  <div style={{marginTop: '12px', borderLeft: '2px solid #ddd', paddingLeft: '12px'}}>
-                    {c.replies.map((r, j) => (
-                      <div key={j} style={{marginBottom: '8px', fontSize: '13px'}}>
-                        <strong>{r.author?.name}</strong>: {r.text}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
+          <div className="idea-author-card">
+            <div className="author-avatar">{authorName?.[0]?.toUpperCase() || 'U'}</div>
+            <div className="author-details">
+              <p className="author-name">{authorName}</p>
+              <p className="author-meta">
+                {[idea.author?.department, idea.author?.batch ? `Class of ${idea.author.batch}` : null].filter(Boolean).join(' • ') || 'Community member'}
+              </p>
+            </div>
+            <button className="btn-secondary">Follow</button>
           </div>
-        </div>
-      </article>
+
+          <div className="idea-content">
+            <section>
+              <h3>
+                <FiBookmark aria-hidden="true" />
+                <span>Problem Statement</span>
+              </h3>
+              <p>{idea.problemStatement || idea.description}</p>
+            </section>
+
+            <section>
+              <h3>
+                <FiCompass aria-hidden="true" />
+                <span>Solution Overview</span>
+              </h3>
+              <p>{idea.solutionOverview || 'No details provided yet.'}</p>
+            </section>
+
+            <section>
+              <h3>
+                <FiTarget aria-hidden="true" />
+                <span>Target Audience</span>
+              </h3>
+              <p>{idea.targetAudience || 'Not specified'}</p>
+            </section>
+
+            {idea.impact && (
+              <section>
+                <h3>
+                  <FiZap aria-hidden="true" />
+                  <span>Impact & USP</span>
+                </h3>
+                <p>{idea.impact}</p>
+              </section>
+            )}
+
+            {idea.tags && idea.tags.length > 0 && (
+              <section>
+                <h3>
+                  <FiTag aria-hidden="true" />
+                  <span>Tags</span>
+                </h3>
+                <div className="tag-list">
+                  {idea.tags.map(tag => (
+                    <span key={tag} className="tag-chip">#{tag}</span>
+                  ))}
+                </div>
+              </section>
+            )}
+          </div>
+
+          <div className="idea-stats">
+            <div>
+              <span className="stat-label">Upvotes</span>
+              <span className="stat-value">{idea.upvotes?.length || 0}</span>
+            </div>
+            <div>
+              <span className="stat-label">Downvotes</span>
+              <span className="stat-value">{idea.downvotes?.length || 0}</span>
+            </div>
+            <div>
+              <span className="stat-label">Comments</span>
+              <span className="stat-value">{idea.comments?.length || 0}</span>
+            </div>
+            <div>
+              <span className="stat-label">Ranking</span>
+              <span className="stat-value">{Math.round((idea.ranking || 0) * 10) / 10}</span>
+            </div>
+          </div>
+
+          <div className="idea-actions">
+            <button onClick={() => vote('up')} className={userVoted === 'up' ? 'active' : ''}>
+              <FiThumbsUp aria-hidden="true" />
+              <span>Upvote</span>
+            </button>
+            <button onClick={() => vote('down')} className={userVoted === 'down' ? 'active' : ''}>
+              <FiThumbsDown aria-hidden="true" />
+              <span>Downvote</span>
+            </button>
+          </div>
+
+          <section className="comments-section">
+            <header>
+              <h3>
+                <FiMessageSquare aria-hidden="true" />
+                <span>Comments ({idea.comments?.length || 0})</span>
+              </h3>
+            </header>
+
+            {user && (
+              <div className="comment-form">
+                <textarea
+                  placeholder="Share your thoughts..."
+                  value={newComment}
+                  onChange={(event) => setNewComment(event.target.value)}
+                ></textarea>
+                <div className="comment-actions">
+                  <button
+                    className="btn-primary"
+                    onClick={submitComment}
+                    disabled={!newComment.trim()}
+                  >
+                    Post Comment
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="comments-list">
+              {idea.comments?.map((c, i) => (
+                <div key={i} className="comment-item">
+                  <div className="comment-header">
+                    <div className="comment-avatar">{(c.author?.name || c.author?.username || 'U')?.[0]?.toUpperCase()}</div>
+                    <div>
+                      <p className="comment-author">{c.author?.name || c.author?.username || 'User'}</p>
+                      <span className="comment-time">{formatDateTime(c.createdAt)}</span>
+                    </div>
+                  </div>
+                  <p className="comment-text">{c.text}</p>
+                  {c.replies?.length > 0 && (
+                    <div className="comment-replies">
+                      {c.replies.map((r, j) => (
+                        <div key={j} className="comment-reply">
+                          <span className="reply-author">{r.author?.name || r.author?.username || 'User'}</span>
+                          <span className="reply-text">{r.text}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        </article>
+      </div>
     </div>
   )
 }

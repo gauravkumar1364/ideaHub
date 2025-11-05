@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const Post = require('../models/Post');
-const User = require('../models/User');
 const auth = require('../middleware/auth');
 
 // create post
@@ -20,7 +19,7 @@ router.post('/', auth, async (req, res) => {
       imageUrl,
       author: req.user._id 
     });
-    await post.populate('author', 'name');
+  await post.populate('author', 'name username profilePicture');
     req.io.emit('new-post', post);
     res.json(post);
   } catch (err) {
@@ -48,7 +47,7 @@ router.get('/', async (req, res) => {
     };
     
     const posts = await Post.find(filter)
-      .populate('author', 'name')
+  .populate('author', 'name username profilePicture')
       .sort(sortOptions[sort] || { createdAt: -1 })
       .skip(parseInt(skip))
       .limit(parseInt(limit));
@@ -60,6 +59,26 @@ router.get('/', async (req, res) => {
   }
 });
 
+// posts from followed users
+router.get('/feed/following', auth, async (req, res) => {
+  try {
+    const followingIds = req.user.following || [];
+    if (!followingIds.length) {
+      return res.json([]);
+    }
+
+    const posts = await Post.find({ author: { $in: followingIds } })
+      .populate('author', 'name username profilePicture')
+      .sort({ createdAt: -1 })
+      .limit(50);
+
+    res.json(posts);
+  } catch (err) {
+    console.error('Following feed error:', err);
+    res.status(500).json({ message: 'Failed to load following feed' });
+  }
+});
+
 // get single post
 router.get('/:id', async (req, res) => {
   try {
@@ -67,7 +86,9 @@ router.get('/:id', async (req, res) => {
       req.params.id,
       { $inc: { views: 1 } },
       { new: true }
-    ).populate('author', 'name bio department followers').populate('comments.author', 'name');
+  ).populate('author', 'name username bio department followers profilePicture')
+   .populate('comments.author', 'name username profilePicture')
+   .populate('comments.replies.author', 'name username profilePicture');
     if (!post) return res.status(404).json({ message: 'Not found' });
     res.json(post);
   } catch (err) {
@@ -125,7 +146,7 @@ router.post('/:postId/comment/:commentId/reply', auth, async (req, res) => {
 router.get('/trending', async (req, res) => {
   try {
     const posts = await Post.find()
-      .populate('author', 'name')
+      .populate('author', 'name username profilePicture')
       .sort({ ranking: -1 })
       .limit(10);
     res.json(posts);

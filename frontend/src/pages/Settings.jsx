@@ -1,503 +1,433 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import axios from 'axios'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useOutletContext } from 'react-router-dom'
+import {
+	FiUser,
+	FiLock,
+	FiShield,
+	FiSettings,
+	FiLogOut,
+	FiCamera,
+	FiTrash2
+} from 'react-icons/fi'
 
 const API = import.meta.env.VITE_API || 'http://localhost:5000/api'
 
 export default function Settings(){
-  const navigate = useNavigate()
-  const [user, setUser] = useState(null)
-  const [tab, setTab] = useState('profile')
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [form, setForm] = useState({
-    name: '',
-    bio: '',
-    department: '',
-    batch: '',
-    email: ''
-  })
-  const [passwords, setPasswords] = useState({
-    current: '',
-    new: '',
-    confirm: ''
-  })
+	const navigate = useNavigate()
+	const outletContext = useOutletContext()
+	const globalSetUser = outletContext?.setUser
+	const [tab, setTab] = useState('profile')
+	const [loading, setLoading] = useState(true)
+	const [saving, setSaving] = useState(false)
+	const [form, setForm] = useState({
+		name: '',
+		username: '',
+		bio: '',
+		department: '',
+		batch: '',
+		profilePicture: null
+	})
+	const [passwords, setPasswords] = useState({
+		current: '',
+		new: '',
+		confirm: ''
+	})
+	const [avatarError, setAvatarError] = useState('')
+	const fileInputRef = useRef(null)
 
-  useEffect(() => {
-    const stored = localStorage.getItem('user')
-    if(!stored) return navigate('/login')
-    setUser(JSON.parse(stored))
-    fetchUserDetails()
-  }, [])
+	useEffect(() => {
+		const stored = localStorage.getItem('user')
+		if(!stored){
+			navigate('/login')
+			return
+		}
+		fetchUserDetails()
+	}, [])
 
-  async function fetchUserDetails(){
-    try{
-      const token = localStorage.getItem('token')
-      const res = await axios.get(API + '/users/profile/me', {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      setForm({
-        name: res.data.name,
-        bio: res.data.bio || '',
-        department: res.data.department || '',
-        batch: res.data.batch || '',
-        email: res.data.email
-      })
-    }catch(e){
-      console.error('Failed to load user details')
-    }finally{
-      setLoading(false)
-    }
-  }
+	async function fetchUserDetails(){
+		try{
+			const token = localStorage.getItem('token')
+			const res = await axios.get(API + '/users/profile/me', {
+				headers: { Authorization: `Bearer ${token}` }
+			})
+			setForm({
+				name: res.data.name || res.data.username || '',
+				username: res.data.username || '',
+				bio: res.data.bio || '',
+				department: res.data.department || '',
+				batch: res.data.batch || '',
+				profilePicture: res.data.profilePicture || null
+			})
+		}catch(e){
+			console.error('Failed to load user details')
+		}finally{
+			setLoading(false)
+		}
+	}
 
-  async function saveProfile(){
-    setSaving(true)
-    try{
-      const token = localStorage.getItem('token')
-      const res = await axios.post(API + '/users/profile/update', form, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      localStorage.setItem('user', JSON.stringify(res.data))
-      alert('Profile updated successfully!')
-    }catch(e){
-      alert('Failed to update profile: ' + (e.response?.data?.message || 'Unknown error'))
-    }finally{
-      setSaving(false)
-    }
-  }
+	function triggerFilePicker(){
+		fileInputRef.current?.click()
+	}
 
-  async function changePassword(){
-    if(passwords.new !== passwords.confirm) return alert('Passwords don\'t match!')
-    if(passwords.new.length < 6) return alert('Password must be at least 6 characters')
-    
-    setSaving(true)
-    try{
-      const token = localStorage.getItem('token')
-      await axios.post(API + '/users/change-password', {
-        currentPassword: passwords.current,
-        newPassword: passwords.new
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      alert('Password changed successfully!')
-      setPasswords({ current: '', new: '', confirm: '' })
-    }catch(e){
-      alert('Failed to change password: ' + (e.response?.data?.message || 'Unknown error'))
-    }finally{
-      setSaving(false)
-    }
-  }
+	function handleAvatarChange(event){
+		const file = event.target.files?.[0]
+		if(!file) return
+		if(!file.type.startsWith('image/')){
+			setAvatarError('Please choose an image file (JPG, PNG, GIF).')
+			event.target.value = ''
+			return
+		}
+		const maxSize = 2 * 1024 * 1024
+		if(file.size > maxSize){
+			setAvatarError('Image must be 2 MB or smaller.')
+			event.target.value = ''
+			return
+		}
+		const reader = new FileReader()
+		reader.onloadend = () => {
+			setForm(prev => ({ ...prev, profilePicture: reader.result }))
+			setAvatarError('')
+		}
+		reader.readAsDataURL(file)
+		event.target.value = ''
+	}
 
-  function logout(){
-    if(window.confirm('Are you sure you want to log out?')){
-      localStorage.removeItem('token')
-      localStorage.removeItem('user')
-      navigate('/login')
-    }
-  }
+	function handleAvatarRemove(){
+		setForm(prev => ({ ...prev, profilePicture: null }))
+		setAvatarError('')
+		if(fileInputRef.current) fileInputRef.current.value = ''
+	}
 
-  if(loading) return <div style={{padding: '40px', textAlign: 'center'}}>Loading...</div>
+	async function saveProfile(){
+		setSaving(true)
+		try{
+			const token = localStorage.getItem('token')
+			const payload = {
+				name: form.name,
+				bio: form.bio,
+				department: form.department,
+				batch: form.batch,
+				profilePicture: form.profilePicture
+			}
+			const res = await axios.post(API + '/users/profile/update', payload, {
+				headers: { Authorization: `Bearer ${token}` }
+			})
+			localStorage.setItem('user', JSON.stringify(res.data))
+			globalSetUser?.(res.data)
+			setForm(prev => ({
+				...prev,
+				profilePicture: res.data.profilePicture || null,
+				name: res.data.name || prev.name,
+				username: res.data.username || prev.username
+			}))
+			alert('Profile updated successfully!')
+		}catch(e){
+			alert('Failed to update profile: ' + (e.response?.data?.message || 'Unknown error'))
+		}finally{
+			setSaving(false)
+		}
+	}
 
-  return (
-    <div className="settings-page">
-      <div style={{maxWidth: '800px', margin: '0 auto', padding: '20px'}}>
-        <h1>⚙️ Settings & Account</h1>
+	async function changePassword(){
+		if(passwords.new !== passwords.confirm){
+			alert("Passwords don't match!")
+			return
+		}
+		if(passwords.new.length < 6){
+			alert('Password must be at least 6 characters')
+			return
+		}
 
-        <div className="settings-tabs">
-          <button 
-            onClick={() => setTab('profile')}
-            className={tab === 'profile' ? 'active' : ''}
-          >
-            👤 Edit Profile
-          </button>
-          <button 
-            onClick={() => setTab('password')}
-            className={tab === 'password' ? 'active' : ''}
-          >
-            🔐 Change Password
-          </button>
-          <button 
-            onClick={() => setTab('privacy')}
-            className={tab === 'privacy' ? 'active' : ''}
-          >
-            🔒 Privacy & Security
-          </button>
-          <button 
-            onClick={() => setTab('account')}
-            className={tab === 'account' ? 'active' : ''}
-          >
-            ⚡ Account
-          </button>
-        </div>
+		setSaving(true)
+		try{
+			const token = localStorage.getItem('token')
+			await axios.post(API + '/users/change-password', {
+				currentPassword: passwords.current,
+				newPassword: passwords.new
+			}, {
+				headers: { Authorization: `Bearer ${token}` }
+			})
+			alert('Password changed successfully!')
+			setPasswords({ current: '', new: '', confirm: '' })
+		}catch(e){
+			alert('Failed to change password: ' + (e.response?.data?.message || 'Unknown error'))
+		}finally{
+			setSaving(false)
+		}
+	}
 
-        {tab === 'profile' && (
-          <div className="settings-content">
-            <h2>Edit Your Profile</h2>
-            
-            <div className="form-group">
-              <label>Full Name</label>
-              <input 
-                value={form.name}
-                onChange={(e) => setForm({...form, name: e.target.value})}
-                placeholder="Your name"
-                style={{width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd'}}
-              />
-            </div>
+	function logout(){
+		if(window.confirm('Are you sure you want to log out?')){
+			localStorage.removeItem('token')
+			localStorage.removeItem('user')
+			navigate('/login')
+		}
+	}
 
-            <div className="form-group">
-              <label>Bio</label>
-              <textarea 
-                value={form.bio}
-                onChange={(e) => setForm({...form, bio: e.target.value})}
-                placeholder="Tell us about yourself..."
-                style={{width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd', minHeight: '80px'}}
-              />
-            </div>
+	if(loading) return <div className="loading-state">Loading settings...</div>
 
-            <div className="form-group">
-              <label>Department</label>
-              <input 
-                value={form.department}
-                onChange={(e) => setForm({...form, department: e.target.value})}
-                placeholder="e.g., Computer Science, Engineering"
-                style={{width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd'}}
-              />
-            </div>
+	return (
+		<div className="settings-page">
+			<div className="page-shell settings-shell">
+				<header className="page-header">
+					<div>
+						<h1>Settings & account</h1>
+						<p className="page-subtitle">Tune your profile, security, and preferences for ideaHub.</p>
+					</div>
+				</header>
 
-            <div className="form-group">
-              <label>Batch / Graduation Year</label>
-              <input 
-                value={form.batch}
-                onChange={(e) => setForm({...form, batch: e.target.value})}
-                placeholder="e.g., 2024"
-                style={{width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd'}}
-              />
-            </div>
+				<nav className="settings-tabs">
+					<button onClick={() => setTab('profile')} className={tab === 'profile' ? 'active' : ''}>
+						<FiUser aria-hidden="true" />
+						<span>Profile</span>
+					</button>
+					<button onClick={() => setTab('password')} className={tab === 'password' ? 'active' : ''}>
+						<FiLock aria-hidden="true" />
+						<span>Password</span>
+					</button>
+					<button onClick={() => setTab('privacy')} className={tab === 'privacy' ? 'active' : ''}>
+						<FiShield aria-hidden="true" />
+						<span>Privacy</span>
+					</button>
+					<button onClick={() => setTab('account')} className={tab === 'account' ? 'active' : ''}>
+						<FiSettings aria-hidden="true" />
+						<span>Account</span>
+					</button>
+				</nav>
 
-            <div className="form-group">
-              <label>Email (Read-only)</label>
-              <input 
-                value={form.email}
-                disabled
-                style={{width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd', background: '#f5f5f5'}}
-              />
-            </div>
+				{tab === 'profile' && (
+					<section className="settings-content card">
+						<header className="settings-section-header">
+							<h2>Profile details</h2>
+							<p>Update how others see you across the community.</p>
+						</header>
 
-            <button 
-              onClick={saveProfile}
-              disabled={saving}
-              style={{
-                padding: '12px 24px',
-                background: '#007bff',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                fontWeight: 'bold',
-                marginTop: '20px'
-              }}
-            >
-              {saving ? '💾 Saving...' : '💾 Save Changes'}
-            </button>
-          </div>
-        )}
+						<div className="settings-avatar-row">
+							<div className="settings-avatar-preview">
+								{form.profilePicture ? (
+									<img src={form.profilePicture} alt="Profile avatar preview" className="avatar-image" />
+								) : (
+									<span>{form.name?.[0]?.toUpperCase() || 'U'}</span>
+								)}
+							</div>
+							<div className="settings-avatar-actions">
+								<button type="button" className="btn-secondary" onClick={triggerFilePicker}>
+									<FiCamera aria-hidden="true" />
+									<span>Change photo</span>
+								</button>
+								{form.profilePicture && (
+									<button type="button" className="btn-tertiary" onClick={handleAvatarRemove}>
+										<FiTrash2 aria-hidden="true" />
+										<span>Remove</span>
+									</button>
+								)}
+								<p className="input-help">JPG or PNG up to 2 MB.</p>
+								{avatarError && <p className="input-error">{avatarError}</p>}
+							</div>
+							<input
+								type="file"
+								ref={fileInputRef}
+								accept="image/*"
+								onChange={handleAvatarChange}
+								className="sr-only"
+							/>
+						</div>
 
-        {tab === 'password' && (
-          <div className="settings-content">
-            <h2>Change Your Password</h2>
-            
-            <div style={{background: '#fff3cd', padding: '12px', borderRadius: '6px', marginBottom: '20px', borderLeft: '4px solid #ffc107'}}>
-              <p style={{margin: 0, color: '#856404'}}>For security, choose a strong password with letters, numbers, and special characters.</p>
-            </div>
+						<div className="form-grid">
+							<div className="form-group">
+								<label>Full name</label>
+								<input 
+									value={form.name}
+									onChange={(e) => setForm({...form, name: e.target.value})}
+									placeholder="Your name"
+								/>
+							</div>
+							<div className="form-group">
+								<label>Username</label>
+								<input 
+									value={form.username}
+									disabled
+								/>
+								<p className="input-help">Usernames are unique and used for login.</p>
+							</div>
+							<div className="form-group">
+								<label>Department</label>
+								<input 
+									value={form.department}
+									onChange={(e) => setForm({...form, department: e.target.value})}
+									placeholder="e.g., Computer Science"
+								/>
+							</div>
+							<div className="form-group span-2">
+								<label>Bio</label>
+								<textarea 
+									value={form.bio}
+									onChange={(e) => setForm({...form, bio: e.target.value})}
+									placeholder="Tell us about yourself..."
+									rows={3}
+								/>
+							</div>
+							<div className="form-group">
+								<label>Graduation year</label>
+								<input 
+									value={form.batch}
+									onChange={(e) => setForm({...form, batch: e.target.value})}
+									placeholder="e.g., 2025"
+								/>
+							</div>
+						</div>
 
-            <div className="form-group">
-              <label>Current Password</label>
-              <input 
-                type="password"
-                value={passwords.current}
-                onChange={(e) => setPasswords({...passwords, current: e.target.value})}
-                placeholder="Enter your current password"
-                style={{width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd'}}
-              />
-            </div>
+						<div className="settings-actions">
+							<button onClick={saveProfile} disabled={saving} className="btn-primary">
+								{saving ? 'Saving...' : 'Save changes'}
+							</button>
+						</div>
+					</section>
+				)}
 
-            <div className="form-group">
-              <label>New Password</label>
-              <input 
-                type="password"
-                value={passwords.new}
-                onChange={(e) => setPasswords({...passwords, new: e.target.value})}
-                placeholder="Enter new password"
-                style={{width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd'}}
-              />
-            </div>
+				{tab === 'password' && (
+					<section className="settings-content card">
+						<header className="settings-section-header">
+							<h2>Change password</h2>
+							<p>Keep your account secure with a strong password.</p>
+						</header>
 
-            <div className="form-group">
-              <label>Confirm Password</label>
-              <input 
-                type="password"
-                value={passwords.confirm}
-                onChange={(e) => setPasswords({...passwords, confirm: e.target.value})}
-                placeholder="Confirm new password"
-                style={{width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd'}}
-              />
-            </div>
+						<div className="info-banner warning">
+							For security, choose a password with letters, numbers, and special characters.
+						</div>
 
-            <button 
-              onClick={changePassword}
-              disabled={saving}
-              style={{
-                padding: '12px 24px',
-                background: '#28a745',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                fontWeight: 'bold',
-                marginTop: '20px'
-              }}
-            >
-              {saving ? '⏳ Updating...' : '🔐 Change Password'}
-            </button>
-          </div>
-        )}
+						<div className="form-group">
+							<label>Current password</label>
+							<input 
+								type="password"
+								value={passwords.current}
+								onChange={(e) => setPasswords({...passwords, current: e.target.value})}
+								placeholder="Enter your current password"
+							/>
+						</div>
+						<div className="form-group">
+							<label>New password</label>
+							<input 
+								type="password"
+								value={passwords.new}
+								onChange={(e) => setPasswords({...passwords, new: e.target.value})}
+								placeholder="Enter a new password"
+							/>
+						</div>
+						<div className="form-group">
+							<label>Confirm password</label>
+							<input 
+								type="password"
+								value={passwords.confirm}
+								onChange={(e) => setPasswords({...passwords, confirm: e.target.value})}
+								placeholder="Re-enter new password"
+							/>
+						</div>
 
-        {tab === 'privacy' && (
-          <div className="settings-content">
-            <h2>Privacy & Security</h2>
-            
-            <div className="setting-item">
-              <div>
-                <h4>Public Profile</h4>
-                <p style={{color: '#666', fontSize: '14px'}}>Allow others to view your profile and ideas</p>
-              </div>
-              <input type="checkbox" defaultChecked />
-            </div>
+						<div className="settings-actions">
+							<button onClick={changePassword} disabled={saving} className="btn-primary">
+								{saving ? 'Updating...' : 'Change password'}
+							</button>
+						</div>
+					</section>
+				)}
 
-            <div className="setting-item">
-              <div>
-                <h4>Email Notifications</h4>
-                <p style={{color: '#666', fontSize: '14px'}}>Receive email for new follows, comments, and upvotes</p>
-              </div>
-              <input type="checkbox" defaultChecked />
-            </div>
+				{tab === 'privacy' && (
+					<section className="settings-content card">
+						<header className="settings-section-header">
+							<h2>Privacy & security</h2>
+							<p>Control who can see your activity and how we contact you.</p>
+						</header>
 
-            <div className="setting-item">
-              <div>
-                <h4>Show Email to Others</h4>
-                <p style={{color: '#666', fontSize: '14px'}}>Let other users contact you via email</p>
-              </div>
-              <input type="checkbox" />
-            </div>
+						<div className="setting-item">
+							<div>
+								<h4>Public profile</h4>
+								<p>Allow others to view your profile and published ideas.</p>
+							</div>
+							<label className="toggle">
+								<input type="checkbox" defaultChecked />
+								<span className="toggle-slider"></span>
+							</label>
+						</div>
 
-            <div className="setting-item">
-              <div>
-                <h4>Two-Factor Authentication</h4>
-                <p style={{color: '#666', fontSize: '14px'}}>Add extra security to your account (coming soon)</p>
-              </div>
-              <button disabled style={{padding: '8px 16px', background: '#ddd', color: '#999', border: 'none', borderRadius: '4px', cursor: 'not-allowed'}}>
-                Enable
-              </button>
-            </div>
-          </div>
-        )}
+						<div className="setting-item">
+							<div>
+								<h4>Email notifications</h4>
+								<p>Get email updates for new follows, comments, and upvotes.</p>
+							</div>
+							<label className="toggle">
+								<input type="checkbox" defaultChecked />
+								<span className="toggle-slider"></span>
+							</label>
+						</div>
 
-        {tab === 'account' && (
-          <div className="settings-content">
-            <h2>Account Management</h2>
-            
-            <div className="danger-zone">
-              <h3>⚠️ Danger Zone</h3>
-              
-              <div className="danger-item">
-                <div>
-                  <h4>Download Your Data</h4>
-                  <p style={{color: '#666', fontSize: '14px'}}>Get a copy of all your data (coming soon)</p>
-                </div>
-                <button disabled style={{padding: '8px 16px', background: '#ddd', color: '#999', border: 'none', borderRadius: '4px', cursor: 'not-allowed'}}>
-                  📥 Download
-                </button>
-              </div>
+						<div className="setting-item">
+							<div>
+								<h4>Show email to others</h4>
+								<p>Let other users reach out to you directly via email.</p>
+							</div>
+							<label className="toggle">
+								<input type="checkbox" />
+								<span className="toggle-slider"></span>
+							</label>
+						</div>
 
-              <div className="danger-item">
-                <div>
-                  <h4>Deactivate Account</h4>
-                  <p style={{color: '#666', fontSize: '14px'}}>Temporarily disable your account (you can reactivate later)</p>
-                </div>
-                <button style={{padding: '8px 16px', background: '#ffc107', color: '#333', border: 'none', borderRadius: '4px', cursor: 'pointer'}}>
-                  ⏸️ Deactivate
-                </button>
-              </div>
+						<div className="setting-item">
+							<div>
+								<h4>Two-factor authentication</h4>
+								<p>Extra verification for sign-in (coming soon).</p>
+							</div>
+							<button className="btn-secondary" disabled>
+								Enable
+							</button>
+						</div>
+					</section>
+				)}
 
-              <div className="danger-item">
-                <div>
-                  <h4>Delete Account Permanently</h4>
-                  <p style={{color: '#666', fontSize: '14px'}}>This action cannot be undone. All your data will be deleted.</p>
-                </div>
-                <button style={{padding: '8px 16px', background: '#dc3545', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer'}}>
-                  🗑️ Delete Permanently
-                </button>
-              </div>
-            </div>
+				{tab === 'account' && (
+					<section className="settings-content card">
+						<header className="settings-section-header">
+							<h2>Account management</h2>
+							<p>Download your data or close your account.</p>
+						</header>
 
-            <div style={{marginTop: '30px'}}>
-              <button 
-                onClick={logout}
-                style={{
-                  padding: '12px 24px',
-                  background: '#6c757d',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontWeight: 'bold',
-                  width: '100%'
-                }}
-              >
-                🚪 Logout
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
+						<div className="danger-zone">
+							<div className="danger-item">
+								<div>
+									<h4>Download your data</h4>
+									<p>Get a copy of everything you have shared. Coming soon.</p>
+								</div>
+								<button className="btn-secondary" disabled>Download</button>
+							</div>
 
-      <style>{`
-        .settings-page {
-          padding: 20px 0;
-          background: #f8f9fa;
-          minHeight: 100vh;
-        }
+							<div className="danger-item">
+								<div>
+									<h4>Deactivate account</h4>
+									<p>Temporarily disable your account. You can reactivate later.</p>
+								</div>
+								<button className="btn-warning">Deactivate</button>
+							</div>
 
-        .settings-tabs {
-          display: flex;
-          gap: 10px;
-          marginBottom: 30px;
-          borderBottom: 1px solid #e0e0e0;
-          flexWrap: wrap;
-        }
+							<div className="danger-item">
+								<div>
+									<h4>Delete account</h4>
+									<p>This action cannot be undone. All your data will be removed.</p>
+								</div>
+								<button className="btn-danger">Delete permanently</button>
+							</div>
+						</div>
 
-        .settings-tabs button {
-          padding: 10px 16px;
-          background: white;
-          border: none;
-          cursor: pointer;
-          color: #666;
-          fontWeight: bold;
-          borderBottom: 3px solid transparent;
-          transition: all 0.3s ease;
-        }
-
-        .settings-tabs button:hover {
-          color: #007bff;
-        }
-
-        .settings-tabs button.active {
-          color: #007bff;
-          borderBottomColor: #007bff;
-        }
-
-        .settings-tabs button:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-        }
-
-        .settings-content {
-          background: white;
-          padding: 30px;
-          borderRadius: 8px;
-          border: 1px solid #e0e0e0;
-        }
-
-        .form-group {
-          marginBottom: 20px;
-        }
-
-        .form-group label {
-          display: block;
-          fontWeight: bold;
-          marginBottom: 8px;
-          color: #333;
-        }
-
-        .form-group input,
-        .form-group textarea {
-          fontFamily: inherit;
-        }
-
-        .setting-item {
-          display: flex;
-          justifyContent: space-between;
-          alignItems: center;
-          padding: 16px 0;
-          borderBottom: 1px solid #e0e0e0;
-        }
-
-        .setting-item:last-child {
-          borderBottom: none;
-        }
-
-        .danger-zone {
-          background: #fff5f5;
-          padding: 20px;
-          borderRadius: 8px;
-          border: 1px solid #fcc;
-          marginTop: 20px;
-        }
-
-        .danger-zone h3 {
-          color: #dc3545;
-          margin-top: 0;
-        }
-
-        .danger-item {
-          display: flex;
-          justifyContent: space-between;
-          alignItems: center;
-          padding: 12px 0;
-          borderBottom: 1px solid #fdd;
-        }
-
-        .danger-item:last-child {
-          borderBottom: none;
-        }
-
-        .danger-item h4 {
-          margin: 0 0 4px 0;
-          color: #333;
-        }
-
-        @media (maxWidth: 600px) {
-          .settings-tabs {
-            flexDirection: column;
-          }
-
-          .settings-tabs button {
-            width: 100%;
-            borderBottom: none;
-            borderLeft: 3px solid transparent;
-          }
-
-          .settings-tabs button.active {
-            borderLeftColor: #007bff;
-          }
-
-          .settings-content {
-            padding: 20px;
-          }
-
-          .setting-item,
-          .danger-item {
-            flexDirection: column;
-            alignItems: flex-start;
-            gap: 10px;
-          }
-
-          .setting-item button,
-          .danger-item button {
-            width: 100%;
-          }
-        }
-      `}</style>
-    </div>
-  )
+						<div className="settings-actions">
+							<button onClick={logout} className="btn-secondary full-width">
+								<FiLogOut aria-hidden="true" />
+								<span>Logout</span>
+							</button>
+						</div>
+					</section>
+				)}
+			</div>
+		</div>
+	)
 }
+

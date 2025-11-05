@@ -11,8 +11,9 @@ const NotificationSchema = new mongoose.Schema({
 });
 
 const UserSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  email: { type: String, required: true, unique: true },
+  username: { type: String, required: true, unique: true, trim: true },
+  name: { type: String, default: '' },
+  email: { type: String, unique: true, sparse: true, trim: true },
   password: { type: String, required: true },
   bio: { type: String, default: '' },
   department: { type: String, default: '' },

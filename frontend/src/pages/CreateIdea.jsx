@@ -82,19 +82,24 @@ export default function CreateIdea(){
 
   return (
     <div className="create-idea-page">
-      <div style={{maxWidth: '600px', margin: '0 auto', padding: '20px'}}>
-        <h1>Share Your Idea</h1>
-        
+      <div className="page-shell create-idea-shell">
+        <header className="create-idea-header">
+          <div>
+            <h1>Share your next big idea</h1>
+            <p className="page-subtitle">Walk through a few quick steps and publish to the community feed.</p>
+          </div>
+          <span className="step-indicator">Step {step} of 4</span>
+        </header>
+
         <div className="step-header">
           <div className="progress-bar">
-            <div className="progress-fill" style={{width: (step / 4 * 100) + '%'}}></div>
+            <div className="progress-fill" style={{width: `${(step / 4) * 100}%`}}></div>
           </div>
-          <p className="step-info">Step {step} of 4</p>
         </div>
 
-        <form>
+        <form className="idea-form">
           {step === 1 && (
-            <div>
+            <div className="form-section">
               <div className="form-group">
                 <label>Idea Title *</label>
                 <input type="text" name="title" value={form.title} onChange={handleChange} placeholder="Your idea in one line..." maxLength="100" />
@@ -122,7 +127,7 @@ export default function CreateIdea(){
           )}
 
           {step === 2 && (
-            <div>
+            <div className="form-section">
               <div className="form-group">
                 <label>Problem Statement</label>
                 <textarea name="problemStatement" value={form.problemStatement} onChange={handleChange} placeholder="What problem does this solve?"></textarea>
@@ -135,7 +140,7 @@ export default function CreateIdea(){
           )}
 
           {step === 3 && (
-            <div>
+            <div className="form-section">
               <div className="form-group">
                 <label>Target Audience</label>
                 <input type="text" name="targetAudience" value={form.targetAudience} onChange={handleChange} placeholder="Who will benefit from this?" />
@@ -148,9 +153,24 @@ export default function CreateIdea(){
           )}
 
           {step === 4 && (
-            <div className="form-group">
-              <label>Tags (comma-separated)</label>
-              <input type="text" name="tags" value={form.tags} onChange={handleChange} placeholder="innovation, startup, ideas..." />
+            <div className="form-section">
+              <div className="form-group">
+                <label>Tags (comma-separated)</label>
+                <input type="text" name="tags" value={form.tags} onChange={handleChange} placeholder="innovation, startup, ideas..." />
+                <small>Tags help people discover your idea faster.</small>
+              </div>
+              <div className="preview-card card">
+                <h3>Preview</h3>
+                <p className="preview-title">{form.title || 'Your title goes here'}</p>
+                <p className="preview-desc">{form.description ? form.description.substring(0, 160) + (form.description.length > 160 ? '…' : '') : 'Your summary will appear here.'}</p>
+                {form.tags && (
+                  <div className="preview-tags">
+                    {form.tags.split(',').map(tag => tag.trim()).filter(Boolean).map(tag => (
+                      <span key={tag}>#{tag}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -173,9 +193,7 @@ export default function CreateIdea(){
           </div>
         </form>
 
-        <small style={{display: 'block', marginTop: '20px', color: '#999', textAlign: 'center'}}>
-          Your draft is automatically saved. You can come back anytime!
-        </small>
+        <p className="autosave-hint">Drafts save automatically. Come back any time to finish up.</p>
       </div>
     </div>
   )

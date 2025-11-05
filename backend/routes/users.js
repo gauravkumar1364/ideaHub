@@ -9,8 +9,8 @@ router.get('/profile/me', auth, async (req, res) => {
   try {
     const user = await User.findById(req.user._id)
       .select('-password')
-      .populate('following', 'name')
-      .populate('followers', 'name');
+      .populate('following', 'name username profilePicture')
+      .populate('followers', 'name username profilePicture');
     if (!user) return res.status(404).json({ message: 'Not found' });
     
     // Get user's posts/ideas
@@ -18,6 +18,45 @@ router.get('/profile/me', auth, async (req, res) => {
     res.json({ ...user.toObject(), ideas });
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// notifications (current user)
+router.get('/notifications', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id)
+      .select('notifications')
+      .populate({ path: 'notifications.relatedUser', select: 'name username profilePicture' })
+      .populate({ path: 'notifications.relatedPost', select: 'title' });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const notifications = (user.notifications || [])
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .map((notif) => ({
+        _id: notif._id,
+        type: notif.type,
+        message: notif.message,
+        read: notif.read,
+        createdAt: notif.createdAt,
+        actor: notif.relatedUser
+          ? {
+              _id: notif.relatedUser._id,
+              name: notif.relatedUser.name,
+              username: notif.relatedUser.username,
+              profilePicture: notif.relatedUser.profilePicture || null,
+            }
+          : null,
+        postId: notif.relatedPost ? notif.relatedPost._id : null,
+        postTitle: notif.relatedPost ? notif.relatedPost.title : null,
+      }));
+
+    res.json(notifications);
+  } catch (err) {
+    console.error('Notifications fetch error:', err);
+    res.status(500).json({ message: 'Failed to load notifications' });
   }
 });
 
@@ -39,13 +78,13 @@ router.get('/profile/:id', async (req, res) => {
     
     const user = await User.findById(userId)
       .select('-password')
-      .populate('following', 'name')
-      .populate('followers', 'name');
+      .populate('following', 'name username profilePicture')
+      .populate('followers', 'name username profilePicture');
     if (!user) return res.status(404).json({ message: 'Not found' });
     
     // Get user's posts/ideas
     const ideas = await Post.find({ author: userId })
-      .populate('author', 'name')
+      .populate('author', 'name username')
       .sort({ createdAt: -1 });
     
     const userObj = user.toObject();
@@ -61,13 +100,13 @@ router.get('/:id', async (req, res) => {
   try {
     const user = await User.findById(req.params.id)
       .select('-password')
-      .populate('following', 'name')
-      .populate('followers', 'name');
+      .populate('following', 'name username profilePicture')
+      .populate('followers', 'name username profilePicture');
     if (!user) return res.status(404).json({ message: 'Not found' });
     
     // Get user's posts/ideas
     const ideas = await Post.find({ author: req.params.id }).sort({ createdAt: -1 });
-    res.json({ ...user.toObject(), ideas });
+  res.json({ ...user.toObject(), ideas });
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
   }
@@ -114,12 +153,18 @@ router.post('/:id/unfollow', auth, async (req, res) => {
 // update profile
 router.post('/profile/update', auth, async (req, res) => {
   try {
-    const { name, bio, department, batch } = req.body;
+    const { name, bio, department, batch, profilePicture } = req.body;
+    const update = { name, bio, department, batch };
+    if (typeof profilePicture !== 'undefined') {
+      update.profilePicture = profilePicture || null;
+    }
+
     const user = await User.findByIdAndUpdate(
       req.user._id,
-      { name, bio, department, batch },
+      update,
       { new: true, runValidators: true }
     ).select('-password');
+
     res.json(user);
   } catch (err) {
     console.error('Profile update error:', err);
@@ -146,7 +191,15 @@ router.post('/change-password', auth, async (req, res) => {
 router.get('/', async (req, res) => {
   try {
     const q = req.query.q || '';
-    const users = await User.find({ name: new RegExp(q, 'i') }).limit(20).select('-password');
+    const regex = new RegExp(q, 'i');
+    const users = await User.find({
+      $or: [
+        { name: regex },
+        { username: regex }
+      ]
+    })
+      .limit(20)
+      .select('-password');
     res.json(users);
   } catch (err) {
     res.status(500).json({ message: 'Server error' });

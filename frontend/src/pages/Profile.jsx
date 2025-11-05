@@ -1,6 +1,14 @@
 import React, { useEffect, useState } from 'react'
 import axios from 'axios'
 import { useParams, useNavigate } from 'react-router-dom'
+import {
+  FiEdit3,
+  FiUserPlus,
+  FiUserCheck,
+  FiZap,
+  FiMessageSquare,
+  FiThumbsUp
+} from 'react-icons/fi'
 
 const API = import.meta.env.VITE_API || 'http://localhost:5000/api'
 
@@ -58,18 +66,30 @@ export default function Profile(){
   if(loading) return <div style={{padding: '40px', textAlign: 'center'}}>Loading profile...</div>
   if(!profile) return <div style={{padding: '40px', textAlign: 'center'}}>Profile not found</div>
 
+  const displayName = profile.name || profile.username || 'User'
+
   return (
     <div className="profile-page">
-      <div style={{maxWidth: '1000px', margin: '0 auto', padding: '20px'}}>
-        {/* Profile Header */}
-        <div className="profile-header">
-          <div className="profile-avatar">{profile.name?.[0]?.toUpperCase() || 'U'}</div>
+      <div className="page-shell profile-shell">
+        <section className="profile-header card">
+          <div className="profile-avatar">
+            {profile.profilePicture ? (
+              <img src={profile.profilePicture} alt={`${displayName}'s avatar`} className="avatar-image" />
+            ) : (
+              displayName?.[0]?.toUpperCase() || 'U'
+            )}
+          </div>
           <div className="profile-info">
-            <h1>{profile.name}</h1>
-            {profile.department && <p className="profile-username">{profile.department}</p>}
-            {profile.batch && <p className="profile-username">Class of {profile.batch}</p>}
+            <h1>{displayName}</h1>
+            {profile.username && (
+              <p className="profile-handle">@{profile.username}</p>
+            )}
+            <div className="profile-meta">
+              {profile.department && <span>{profile.department}</span>}
+              {profile.batch && <span>Class of {profile.batch}</span>}
+            </div>
             {profile.bio && <p className="profile-bio">{profile.bio}</p>}
-            
+
             <div className="profile-stats">
               <div className="stat">
                 <div className="stat-number">{ideas.length}</div>
@@ -88,46 +108,62 @@ export default function Profile(){
             <div className="profile-actions">
               {isOwn ? (
                 <button onClick={() => navigate('/settings')} className="btn-primary">
-                  Edit Profile
+                  <FiEdit3 aria-hidden="true" />
+                  <span>Edit profile</span>
                 </button>
               ) : (
                 <button onClick={toggleFollow} className={isFollowing ? 'btn-secondary' : 'btn-primary'}>
-                  {isFollowing ? 'Following' : 'Follow'}
+                  {isFollowing ? (
+                    <>
+                      <FiUserCheck aria-hidden="true" />
+                      <span>Following</span>
+                    </>
+                  ) : (
+                    <>
+                      <FiUserPlus aria-hidden="true" />
+                      <span>Follow</span>
+                    </>
+                  )}
                 </button>
               )}
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* Ideas Grid */}
-        <div style={{marginTop: '30px'}}>
-          <h2 style={{fontSize: '20px', fontWeight: '600', marginBottom: '16px', color: '#000'}}>
-            {isOwn ? 'My Ideas' : profile.name + "'s Ideas"} ({ideas.length})
-          </h2>
+        <section className="profile-ideas">
+          <header className="section-header">
+            <h2>{isOwn ? 'My ideas' : `${displayName}'s ideas`}</h2>
+            <span className="section-count">{ideas.length}</span>
+          </header>
+
           {ideas.length === 0 ? (
-            <div style={{textAlign: 'center', padding: '40px', background: '#f5f5f5', borderRadius: '4px', color: '#999'}}>
-              <p>{isOwn ? 'You haven\'t shared any ideas yet. Start by creating one!' : profile.name + ' hasn\'t shared any ideas yet.'}</p>
+            <div className="empty-state">
+              <div className="empty-icon" aria-hidden="true">
+                <FiZap size={44} />
+              </div>
+              <p>{isOwn ? 'You haven\'t shared any ideas yet. Start by creating one!' : `${displayName} hasn\'t shared any ideas yet.`}</p>
               {isOwn && (
-                <button onClick={() => navigate('/create')} className="btn-primary" style={{marginTop: '12px'}}>
-                  Create First Idea
+                <button onClick={() => navigate('/create')} className="btn-primary">
+                  <FiZap aria-hidden="true" />
+                  <span>Create first idea</span>
                 </button>
               )}
             </div>
           ) : (
             <div className="ideas-grid">
               {ideas.map(idea => (
-                <div key={idea._id} className="idea-card" onClick={() => navigate(`/idea/${idea._id}`)}>
+                <article key={idea._id} className="idea-card" onClick={() => navigate(`/idea/${idea._id}`)}>
                   <h4>{idea.title}</h4>
-                  <p className="post-description">{idea.description.substring(0, 80)}...</p>
-                  <div style={{display: 'flex', gap: '12px', fontSize: '12px', color: '#999', marginTop: '8px'}}>
-                    <span>{idea.upvotes?.length || 0} Upvotes</span>
-                    <span>{idea.comments?.length || 0} Comments</span>
+                  <p className="post-description">{idea.description.substring(0, 90)}...</p>
+                  <div className="idea-card-footer">
+                    <span><FiThumbsUp aria-hidden="true" /> {idea.upvotes?.length || 0}</span>
+                    <span><FiMessageSquare aria-hidden="true" /> {idea.comments?.length || 0}</span>
                   </div>
-                </div>
+                </article>
               ))}
             </div>
           )}
-        </div>
+        </section>
       </div>
     </div>
   )
