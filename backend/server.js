@@ -14,7 +14,8 @@ const { Server } = require('socket.io');
 
 // ✅ Allowed Frontend URLs
 const allowedOrigins = [
-  "https://idea-hub-swart.vercel.app",
+  "https://ideahubdtu.vercel.app",  // ✅ new frontend domain
+  "https://idea-hub-swart.vercel.app", // if still needed
   "http://localhost:3000"
 ];
 
