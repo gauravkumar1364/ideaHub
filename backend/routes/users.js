@@ -112,8 +112,8 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// follow / unfollow
-router.post('/:id/follow', auth, async (req, res) => {
+// follow endpoint
+router.post('/follow/:id', auth, async (req, res) => {
   try {
     const target = await User.findById(req.params.id);
     if (!target) return res.status(404).json({ message: 'User not found' });
@@ -135,7 +135,7 @@ router.post('/:id/follow', auth, async (req, res) => {
 });
 
 // unfollow endpoint
-router.post('/:id/unfollow', auth, async (req, res) => {
+router.post('/unfollow/:id', auth, async (req, res) => {
   try {
     const target = await User.findById(req.params.id);
     if (!target) return res.status(404).json({ message: 'User not found' });

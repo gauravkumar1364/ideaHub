@@ -32,6 +32,39 @@ router.post('/', auth, async (req, res) => {
   }
 });
 
+// posts from followed users (define before /:id to avoid catch-all)
+router.get('/feed/following', auth, async (req, res) => {
+  try {
+    const followingIds = req.user.following || [];
+    if (!followingIds.length) {
+      return res.json([]);
+    }
+
+    const posts = await Post.find({ author: { $in: followingIds } })
+      .populate('author', 'name username profilePicture')
+      .sort({ createdAt: -1 })
+      .limit(50);
+
+    res.json(posts);
+  } catch (err) {
+    console.error('Following feed error:', err);
+    res.status(500).json({ message: 'Failed to load following feed' });
+  }
+});
+
+// get trending posts (define before /:id to avoid catch-all)
+router.get('/trending', async (req, res) => {
+  try {
+    const posts = await Post.find()
+      .populate('author', 'name username profilePicture')
+      .sort({ ranking: -1 })
+      .limit(10);
+    res.json(posts);
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // list posts with filtering
 router.get('/', async (req, res) => {
   try {
@@ -56,26 +89,6 @@ router.get('/', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// posts from followed users
-router.get('/feed/following', auth, async (req, res) => {
-  try {
-    const followingIds = req.user.following || [];
-    if (!followingIds.length) {
-      return res.json([]);
-    }
-
-    const posts = await Post.find({ author: { $in: followingIds } })
-      .populate('author', 'name username profilePicture')
-      .sort({ createdAt: -1 })
-      .limit(50);
-
-    res.json(posts);
-  } catch (err) {
-    console.error('Following feed error:', err);
-    res.status(500).json({ message: 'Failed to load following feed' });
   }
 });
 
@@ -137,19 +150,6 @@ router.post('/:postId/comment/:commentId/reply', auth, async (req, res) => {
     comment.replies.push({ author: req.user._id, text: req.body.text });
     await post.save();
     res.json(post);
-  } catch (err) {
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// get trending posts
-router.get('/trending', async (req, res) => {
-  try {
-    const posts = await Post.find()
-      .populate('author', 'name username profilePicture')
-      .sort({ ranking: -1 })
-      .limit(10);
-    res.json(posts);
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
   }
