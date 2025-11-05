@@ -4,6 +4,11 @@ router.use((req, res, next) => {
   next();
 });
 
+// DEBUG: Simple test endpoint
+router.post('/test', (req, res) => {
+  res.json({ message: 'test endpoint works' });
+});
+
 // get current user profile
 router.get('/profile/me', auth, async (req, res) => {
   try {
