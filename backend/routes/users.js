@@ -105,26 +105,38 @@ router.post('/follow/:id', auth, async (req, res) => {
 router.post('/follow-by-username/:username', auth, async (req, res) => {
   try {
     console.log('Follow by username endpoint hit:', req.params.username);
+    console.log('Current user ID:', req.user._id);
     
     // Find target user by username
     const target = await User.findOne({ username: req.params.username });
     if (!target) return res.status(404).json({ message: 'User not found' });
     
+    // Prevent following self
+    if (target._id.toString() === req.user._id.toString()) {
+      return res.status(400).json({ message: 'Cannot follow yourself' });
+    }
+    
     // Get current user
     const me = await User.findById(req.user._id);
     if (!me) return res.status(404).json({ message: 'Current user not found' });
+    
+    // Initialize arrays if they don't exist
+    if (!me.following) me.following = [];
+    if (!target.followers) target.followers = [];
     
     // Check if already following
     const isFollowing = me.following.some(id => id.toString() === target._id.toString());
     
     if (isFollowing) {
-      // Unfollow
+      // Unfollow - remove IDs from arrays
       me.following = me.following.filter(id => id.toString() !== target._id.toString());
       target.followers = target.followers.filter(id => id.toString() !== me._id.toString());
+      console.log('Unfollowed:', target.username);
     } else {
-      // Follow
+      // Follow - add IDs to arrays
       me.following.push(target._id);
       target.followers.push(me._id);
+      console.log('Followed:', target.username);
     }
     
     await me.save();
@@ -133,8 +145,21 @@ router.post('/follow-by-username/:username', auth, async (req, res) => {
     res.json({ 
       success: true,
       action: isFollowing ? 'unfollowed' : 'followed',
-      me, 
-      target 
+      isFollowing: !isFollowing,
+      me: {
+        _id: me._id,
+        username: me.username,
+        name: me.name,
+        followingCount: me.following.length,
+        followersCount: me.followers.length
+      },
+      target: {
+        _id: target._id,
+        username: target.username,
+        name: target.name,
+        followingCount: target.following.length,
+        followersCount: target.followers.length
+      }
     });
   } catch (err) {
     console.error('Follow by username error:', err);
@@ -262,11 +287,21 @@ router.get('/profile/:id', async (req, res) => {
       userId = payload.id;
     }
     
+    // Validate if userId is a valid MongoDB ObjectId
+    if (!userId.match(/^[0-9a-fA-F]{24}$/)) {
+      console.log('Invalid user ID format:', userId);
+      return res.status(400).json({ message: 'Invalid user ID format' });
+    }
+    
     const user = await User.findById(userId)
       .select('-password')
-      .populate('following', 'name username profilePicture')
-      .populate('followers', 'name username profilePicture');
-    if (!user) return res.status(404).json({ message: 'Not found' });
+      .populate('following', 'name username profilePicture followers')
+      .populate('followers', 'name username profilePicture following');
+    
+    if (!user) {
+      console.log('User not found:', userId);
+      return res.status(404).json({ message: 'User not found' });
+    }
     
     // Get user's posts/ideas
     const ideas = await Post.find({ author: userId })
@@ -274,7 +309,13 @@ router.get('/profile/:id', async (req, res) => {
       .sort({ createdAt: -1 });
     
     const userObj = user.toObject();
-    res.json({ ...userObj, _id: user._id.toString(), ideas });
+    res.json({ 
+      ...userObj, 
+      _id: user._id.toString(), 
+      ideas,
+      followersCount: user.followers.length,
+      followingCount: user.following.length
+    });
   } catch (err) {
     console.error('Profile error:', err);
     res.status(500).json({ message: 'Server error', error: err.message });
@@ -284,17 +325,34 @@ router.get('/profile/:id', async (req, res) => {
 // get profile by ID (legacy)
 router.get('/:id', async (req, res) => {
   try {
+    // Validate if ID is a valid MongoDB ObjectId
+    if (!req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
+      console.log('Invalid user ID format:', req.params.id);
+      return res.status(400).json({ message: 'Invalid user ID format' });
+    }
+    
     const user = await User.findById(req.params.id)
       .select('-password')
       .populate('following', 'name username profilePicture')
       .populate('followers', 'name username profilePicture');
-    if (!user) return res.status(404).json({ message: 'Not found' });
+    
+    if (!user) {
+      console.log('User not found:', req.params.id);
+      return res.status(404).json({ message: 'User not found' });
+    }
     
     // Get user's posts/ideas
     const ideas = await Post.find({ author: req.params.id }).sort({ createdAt: -1 });
-  res.json({ ...user.toObject(), ideas });
+    
+    res.json({ 
+      ...user.toObject(), 
+      ideas,
+      followersCount: user.followers.length,
+      followingCount: user.following.length
+    });
   } catch (err) {
-    res.status(500).json({ message: 'Server error' });
+    console.error('Profile fetch error:', err);
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
 });
 
