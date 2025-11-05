@@ -212,6 +212,7 @@ This project includes a complete **Live Variable Analysis (LVA)** tool for analy
 **Quick Access:**
 - See [LVA_QUICKSTART.md](LVA_QUICKSTART.md) for usage guide
 - See [LVA_DOCUMENTATION.md](LVA_DOCUMENTATION.md) for technical details
+- See [EXISTING_TOOLS_GUIDE.md](EXISTING_TOOLS_GUIDE.md) for automated tools like ESLint, SonarQube, etc.
 
 ---
 
