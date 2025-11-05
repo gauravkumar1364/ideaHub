@@ -10,6 +10,7 @@ import Explore from './pages/Explore'
 import Notifications from './pages/Notifications'
 import FollowingFeed from './pages/FollowingFeed'
 import Settings from './pages/Settings'
+import LiveVariableAnalysis from './pages/LiveVariableAnalysis'
 import './styles.css'
 
 createRoot(document.getElementById('root')).render(
@@ -25,6 +26,7 @@ createRoot(document.getElementById('root')).render(
           <Route path="notifications" element={<Notifications />} />
           <Route path="following" element={<FollowingFeed />} />
           <Route path="settings" element={<Settings />} />
+          <Route path="lva" element={<LiveVariableAnalysis />} />
         </Route>
       </Routes>
     </BrowserRouter>

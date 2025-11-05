@@ -16,6 +16,7 @@ A full-stack MERN application for university students to share startup ideas and
 ✅ **Search** — Find ideas by keyword or discover users  
 ✅ **Live Feed** — Real-time new posts via Socket.io  
 ✅ **Modern UI** — Clean, responsive design inspired by social media  
+✅ **Live Variable Analysis Tool** — Analyze JavaScript code for live variables (Software Testing project)  
 
 ---
 
@@ -142,6 +143,11 @@ VITE_API=http://localhost:5000/api
 - `GET /api/users/:id` — Get user profile
 - `POST /api/users/:id/follow` — Follow/unfollow user (auth required)
 
+### Live Variable Analysis
+- `POST /api/lva/analyze` — Analyze JavaScript code for live variables
+- `GET /api/lva/examples` — Get example code snippets
+- `GET /api/lva/example/:id` — Get specific example with analysis
+
 ---
 
 ## Troubleshooting
@@ -187,6 +193,26 @@ VITE_API=http://localhost:5000/api
 | **Auth** | JWT + bcrypt | Stateless, secure passwords |
 | **Real-time** | Socket.io | Live feed updates |
 | **HTTP** | Axios | Simple promise-based requests |
+| **Code Analysis** | Babel Parser | JavaScript AST parsing for LVA |
+
+---
+
+## Live Variable Analysis Tool
+
+This project includes a complete **Live Variable Analysis (LVA)** tool for analyzing JavaScript code. Access it at `/lva` or click the Activity icon in the navigation bar.
+
+**Key Features:**
+- Parse JavaScript code using Babel
+- Perform backward dataflow analysis
+- Calculate GEN/KILL sets for each statement
+- Visualize live variables at each program point
+- Detect dead code (unused variable assignments)
+- Interactive web interface with 10 example test cases
+
+**Quick Access:**
+- See [LVA_QUICKSTART.md](LVA_QUICKSTART.md) for usage guide
+- See [LVA_DOCUMENTATION.md](LVA_DOCUMENTATION.md) for technical details
+- See [EXISTING_TOOLS_GUIDE.md](EXISTING_TOOLS_GUIDE.md) for automated tools like ESLint, SonarQube, etc.
 
 ---
 
