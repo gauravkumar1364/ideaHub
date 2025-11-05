@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import axios from 'axios'
+import { API } from '../utils/api'
 import {
   FiZap,
   FiSearch,
@@ -15,8 +16,6 @@ import {
   FiSun,
   FiMoon
 } from 'react-icons/fi'
-
-const API = import.meta.env.VITE_API || 'http://localhost:5000/api'
 
 export default function Navbar({ user, theme = 'light', onToggleTheme, onLogin, onLogout }){
   const navigate = useNavigate()

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import axios from 'axios';
+import { API } from '../utils/api';
 import {
   FiTrendingUp,
   FiStar,
@@ -43,13 +44,13 @@ export default function Feed() {
           setLoading(false);
           return;
         }
-        response = await axios.get('http://localhost:5000/api/posts/feed/following', {
+        response = await axios.get(`${API}/posts/feed/following`, {
           headers: { Authorization: `Bearer ${token}` }
         });
       } else {
         const sortMap = { top: 'trending', new: 'latest' };
         const sortParam = sortMap[activeTab] || 'latest';
-        response = await axios.get(`http://localhost:5000/api/posts?sort=${sortParam}`);
+        response = await axios.get(`${API}/posts?sort=${sortParam}`);
       }
       setPosts(response?.data || []);
     } catch (error) {
@@ -67,7 +68,7 @@ export default function Feed() {
     }
     try {
       const type = voteType === 'upvote' ? 'up' : 'down';
-      await axios.post(`http://localhost:5000/api/posts/${ideaId}/vote`, { type });
+  await axios.post(`${API}/posts/${ideaId}/vote`, { type });
       fetchFeed();
     } catch (error) {
       console.error('Vote failed:', error);

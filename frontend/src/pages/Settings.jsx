@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import axios from 'axios'
 import { useNavigate, useOutletContext } from 'react-router-dom'
+import { API } from '../utils/api'
 import {
 	FiUser,
 	FiLock,
@@ -10,8 +11,6 @@ import {
 	FiCamera,
 	FiTrash2
 } from 'react-icons/fi'
-
-const API = import.meta.env.VITE_API || 'http://localhost:5000/api'
 
 export default function Settings(){
 	const navigate = useNavigate()

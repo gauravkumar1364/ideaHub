@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import axios from 'axios'
 import { useNavigate } from 'react-router-dom'
 import io from 'socket.io-client'
+import { API, API_URL } from '../utils/api'
 import {
   FiBell,
   FiBellOff,
@@ -12,8 +13,6 @@ import {
   FiCornerDownRight,
   FiVolume2
 } from 'react-icons/fi'
-
-const API = import.meta.env.VITE_API || 'http://localhost:5000/api'
 
 export default function Notifications(){
   const navigate = useNavigate()
@@ -29,7 +28,7 @@ export default function Notifications(){
 
     fetchNotifications()
 
-    const socket = io(API.replace('/api', ''))
+  const socket = io(API_URL)
     socket.on('new-notification', (notif) => {
       setNotifications(prev => [notif, ...prev])
     })

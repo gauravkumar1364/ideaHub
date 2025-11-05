@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
 import axios from 'axios'
-
-const API = import.meta.env.VITE_API || 'http://localhost:5000/api'
+import { API } from '../utils/api'
 
 export default function Auth({onSuccess, onClose}){
   const [mode, setMode] = useState('login') // 'login' or 'register'

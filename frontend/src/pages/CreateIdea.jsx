@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import axios from 'axios'
 import { useNavigate } from 'react-router-dom'
-
-const API = import.meta.env.VITE_API || 'http://localhost:5000/api'
+import { API } from '../utils/api'
 
 export default function CreateIdea(){
   const navigate = useNavigate()

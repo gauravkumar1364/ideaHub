@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import axios from 'axios'
 import { useParams, useNavigate } from 'react-router-dom'
+import { API } from '../utils/api'
 import {
   FiArrowLeft,
   FiCopy,
@@ -13,8 +14,6 @@ import {
   FiThumbsDown,
   FiMessageSquare
 } from 'react-icons/fi'
-
-const API = import.meta.env.VITE_API || 'http://localhost:5000/api'
 
 export default function IdeaPage(){
   const { id } = useParams()

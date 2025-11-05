@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import axios from 'axios'
 import { useNavigate } from 'react-router-dom'
+import { API } from '../utils/api'
 import {
   FiZap,
   FiUsers,
@@ -11,8 +12,6 @@ import {
   FiBarChart2,
   FiUserCheck
 } from 'react-icons/fi'
-
-const API = import.meta.env.VITE_API || 'http://localhost:5000/api'
 
 export default function Explore(){
   const navigate = useNavigate()

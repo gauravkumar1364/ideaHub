@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import axios from 'axios'
 import { useParams, useNavigate } from 'react-router-dom'
+import { API } from '../utils/api'
 import {
   FiEdit3,
   FiUserPlus,
@@ -9,8 +10,6 @@ import {
   FiMessageSquare,
   FiThumbsUp
 } from 'react-icons/fi'
-
-const API = import.meta.env.VITE_API || 'http://localhost:5000/api'
 
 export default function Profile(){
   const { userId } = useParams()
