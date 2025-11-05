@@ -14,7 +14,8 @@ import {
   FiSettings,
   FiLogOut,
   FiSun,
-  FiMoon
+  FiMoon,
+  FiActivity
 } from 'react-icons/fi'
 
 export default function Navbar({ user, theme = 'light', onToggleTheme, onLogin, onLogout }){
@@ -134,6 +135,13 @@ export default function Navbar({ user, theme = 'light', onToggleTheme, onLogin, 
           title="Following"
         >
           <FiUsers aria-hidden="true" />
+        </button>
+        <button 
+          className={`nav-icon-btn${isActive('/lva') ? ' is-active' : ''}`}
+          onClick={() => handleNavClick('/lva')}
+          title="Live Variable Analysis"
+        >
+          <FiActivity aria-hidden="true" />
         </button>
         
         {user ? (
