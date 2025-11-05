@@ -1,8 +1,8 @@
-const express = require('express');
-const router = express.Router();
-const User = require('../models/User');
-const Post = require('../models/Post');
-const auth = require('../middleware/auth');
+// DEBUG: All requests
+router.use((req, res, next) => {
+  console.log(`[USERS ROUTE] ${req.method} ${req.path}`);
+  next();
+});
 
 // get current user profile
 router.get('/profile/me', auth, async (req, res) => {
@@ -60,8 +60,9 @@ router.get('/notifications', auth, async (req, res) => {
   }
 });
 
-// follow endpoint (define POST routes before GET catch-all)
+// DEBUG: Test follow endpoint
 router.post('/follow/:id', auth, async (req, res) => {
+  console.log('Follow endpoint hit with ID:', req.params.id);
   try {
     const target = await User.findById(req.params.id);
     if (!target) return res.status(404).json({ message: 'User not found' });
@@ -78,6 +79,7 @@ router.post('/follow/:id', auth, async (req, res) => {
     await target.save();
     res.json({ me, target });
   } catch (err) {
+    console.error('Follow error:', err);
     res.status(500).json({ message: 'Server error' });
   }
 });
