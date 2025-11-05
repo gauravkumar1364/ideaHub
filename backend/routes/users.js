@@ -60,59 +60,7 @@ router.get('/notifications', auth, async (req, res) => {
   }
 });
 
-// get profile by userId or 'me'
-router.get('/profile/:id', async (req, res) => {
-  try {
-    let userId = req.params.id;
-    
-    // Handle 'me' endpoint with auth
-    if (userId === 'me') {
-      if (!req.headers.authorization) {
-        return res.status(401).json({ message: 'Not authenticated' });
-      }
-      const token = req.headers.authorization.split(' ')[1];
-      const jwt = require('jsonwebtoken');
-      const payload = jwt.verify(token, process.env.JWT_SECRET || 'devsecret');
-      userId = payload.id;
-    }
-    
-    const user = await User.findById(userId)
-      .select('-password')
-      .populate('following', 'name username profilePicture')
-      .populate('followers', 'name username profilePicture');
-    if (!user) return res.status(404).json({ message: 'Not found' });
-    
-    // Get user's posts/ideas
-    const ideas = await Post.find({ author: userId })
-      .populate('author', 'name username')
-      .sort({ createdAt: -1 });
-    
-    const userObj = user.toObject();
-    res.json({ ...userObj, _id: user._id.toString(), ideas });
-  } catch (err) {
-    console.error('Profile error:', err);
-    res.status(500).json({ message: 'Server error', error: err.message });
-  }
-});
-
-// get profile by ID (legacy)
-router.get('/:id', async (req, res) => {
-  try {
-    const user = await User.findById(req.params.id)
-      .select('-password')
-      .populate('following', 'name username profilePicture')
-      .populate('followers', 'name username profilePicture');
-    if (!user) return res.status(404).json({ message: 'Not found' });
-    
-    // Get user's posts/ideas
-    const ideas = await Post.find({ author: req.params.id }).sort({ createdAt: -1 });
-  res.json({ ...user.toObject(), ideas });
-  } catch (err) {
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// follow endpoint
+// follow endpoint (define POST routes before GET catch-all)
 router.post('/follow/:id', auth, async (req, res) => {
   try {
     const target = await User.findById(req.params.id);
@@ -201,6 +149,58 @@ router.get('/', async (req, res) => {
       .limit(20)
       .select('-password');
     res.json(users);
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// get profile by userId or 'me'
+router.get('/profile/:id', async (req, res) => {
+  try {
+    let userId = req.params.id;
+    
+    // Handle 'me' endpoint with auth
+    if (userId === 'me') {
+      if (!req.headers.authorization) {
+        return res.status(401).json({ message: 'Not authenticated' });
+      }
+      const token = req.headers.authorization.split(' ')[1];
+      const jwt = require('jsonwebtoken');
+      const payload = jwt.verify(token, process.env.JWT_SECRET || 'devsecret');
+      userId = payload.id;
+    }
+    
+    const user = await User.findById(userId)
+      .select('-password')
+      .populate('following', 'name username profilePicture')
+      .populate('followers', 'name username profilePicture');
+    if (!user) return res.status(404).json({ message: 'Not found' });
+    
+    // Get user's posts/ideas
+    const ideas = await Post.find({ author: userId })
+      .populate('author', 'name username')
+      .sort({ createdAt: -1 });
+    
+    const userObj = user.toObject();
+    res.json({ ...userObj, _id: user._id.toString(), ideas });
+  } catch (err) {
+    console.error('Profile error:', err);
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+});
+
+// get profile by ID (legacy)
+router.get('/:id', async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id)
+      .select('-password')
+      .populate('following', 'name username profilePicture')
+      .populate('followers', 'name username profilePicture');
+    if (!user) return res.status(404).json({ message: 'Not found' });
+    
+    // Get user's posts/ideas
+    const ideas = await Post.find({ author: req.params.id }).sort({ createdAt: -1 });
+  res.json({ ...user.toObject(), ideas });
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
   }
