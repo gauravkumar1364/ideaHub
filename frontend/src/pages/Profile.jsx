@@ -31,16 +31,19 @@ export default function Profile(){
     setLoading(true)
     try{
       const res = await axios.get(API + '/users/profile/' + (userId || 'me'))
+      console.log('Profile fetched:', res.data)
       setProfile(res.data)
       setIdeas(res.data.ideas || [])
       const stored = localStorage.getItem('user')
       if(stored){
         const u = JSON.parse(stored)
         setIsOwn(u._id === res.data._id)
-        setIsFollowing(res.data.followers?.some(f => f._id === u._id) || false)
+        // Check if current user is in the followers array
+        const isFollowing = res.data.followers?.some(f => f._id === u._id || f === u._id) || false
+        setIsFollowing(isFollowing)
       }
     }catch(e){
-      console.error('Failed to load profile')
+      console.error('Failed to load profile:', e.response?.data || e.message)
     }finally{
       setLoading(false)
     }
@@ -48,17 +51,26 @@ export default function Profile(){
 
   async function toggleFollow(){
     if(!currentUser) return alert('Please log in')
+    if(!profile) return alert('Profile not loaded')
     try{
       const token = localStorage.getItem('token')
-      const endpoint = isFollowing ? 'unfollow' : 'follow'
-      await axios.post(API + '/users/' + endpoint + '/' + profile._id, {}, { headers: { Authorization: `Bearer ${token}` } })
+      // Use username-based follow endpoint instead of ID
+      const endpoint = isFollowing ? 'unfollow-by-username' : 'follow-by-username'
+      const response = await axios.post(
+        `${API}/users/${endpoint}/${profile.username}`, 
+        {}, 
+        { headers: { Authorization: `Bearer ${token}` } }
+      )
+      console.log('Follow response:', response.data)
       setIsFollowing(!isFollowing)
+      // Update profile with new follower count
       setProfile(prev => ({
         ...prev,
-        followers: isFollowing ? prev.followers.filter(f => f._id !== currentUser._id) : [...prev.followers, currentUser]
+        followersCount: response.data.target.followersCount
       }))
     }catch(e){
-      alert('Failed to update follow status')
+      console.error('Follow error:', e.response?.data || e.message)
+      alert('Failed to update follow status: ' + (e.response?.data?.message || e.message))
     }
   }
 
