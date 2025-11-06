@@ -181,7 +181,7 @@ MIT (use freely, attribution appreciated)
 
 ---
 
-**Built by:** Your team  
+**Built by:** Gaurav & Ankur 
 **Updated:** November 2025
 
 For feature requests or bugs, feel free to ask!
