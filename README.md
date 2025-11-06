@@ -108,21 +108,6 @@ ideaHub/
 
 ---
 
-## Environment Variables
-
-### Backend (`backend/.env`)
-```
-MONGO_URI=mongodb://127.0.0.1:27017/ideahub
-JWT_SECRET=dev_secret_key_change_in_production
-PORT=5000
-```
-
-### Frontend (`frontend/.env` optional)
-```
-VITE_API=http://localhost:5000/api
-```
-
----
 
 ## API Endpoints
 
